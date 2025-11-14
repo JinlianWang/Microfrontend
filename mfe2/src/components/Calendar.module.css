@@ -1,0 +1,110 @@
+.calendar {
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  max-width: 360px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(15, 23, 42, 0.12);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.monthLabel {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.navButton {
+  border: none;
+  background: #1d4ed8;
+  color: #fff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.navButton:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.weekdays,
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.dayButton {
+  border: none;
+  background: transparent;
+  padding: 0.5rem 0;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.dayButton:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.dayButton:hover {
+  background: #e0f2fe;
+}
+
+.inactive {
+  visibility: hidden;
+}
+
+.today {
+  border: 1px solid #3b82f6;
+}
+
+.selected {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legendSwatch {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid #cbd5f5;
+}
+
+.legendToday {
+  border-color: #3b82f6;
+}
+
+.legendSelected {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
