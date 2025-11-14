@@ -1,72 +1,28 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import styles from './App.module.css';
+import remotes from './remotes.js';
+import { createRemoteLoader } from '@lib/createRemoteLoader.js';
 
-const remotes = {
-  mfe1: {
-    id: 'mfe1',
-    label: 'MFE 1',
-    devEntry: 'http://localhost:5174/src/remoteEntry.js',
-    manifestPath: '/mfe1/.vite/manifest.json',
-    basePath: '/mfe1',
-  },
-  mfe2: {
-    id: 'mfe2',
-    label: 'MFE 2',
-    devEntry: 'http://localhost:5175/src/remoteEntry.js',
-    manifestPath: '/mfe2/.vite/manifest.json',
-    basePath: '/mfe2',
-  },
-};
-
-const moduleCache = new Map();
-
-const resolveRemoteUrl = async (remote) => {
-  if (import.meta.env.DEV) {
-    return remote.devEntry;
-  }
-
-  const response = await fetch(remote.manifestPath);
-  if (!response.ok) {
-    throw new Error(`Failed to load manifest for ${remote.id}`);
-  }
-
-  const manifest = await response.json();
-  const entry = manifest['src/remoteEntry.js'];
-  if (!entry?.file) {
-    throw new Error(`Remote entry missing in manifest for ${remote.id}`);
-  }
-
-  return `${remote.basePath}/${entry.file}`;
-};
-
-const loadRemoteModule = async (remote) => {
-  if (moduleCache.has(remote.id)) {
-    return moduleCache.get(remote.id);
-  }
-
-  const url = await resolveRemoteUrl(remote);
-  const module = await import(/* @vite-ignore */ url);
-  if (typeof module.mount !== 'function') {
-    throw new Error(`Remote ${remote.id} does not export a mount function`);
-  }
-
-  moduleCache.set(remote.id, module);
-  return module;
-};
+const remoteLoader = createRemoteLoader(remotes);
 
 const App = () => {
-  const defaultApp = useMemo(() => remotes.mfe1.id, []);
+  const remoteList = useMemo(() => remoteLoader.listRemotes(), []);
+  const defaultApp = remoteList[0]?.id ?? null;
   const [activeId, setActiveId] = useState(defaultApp);
   const [status, setStatus] = useState({ loading: true, error: null });
-  const activeRemote = remotes[activeId];
-  const currentLabel = activeRemote?.label ?? 'Microfrontend';
   const containerRef = useRef(null);
   const currentCleanupRef = useRef(null);
   const loadToken = useRef(0);
 
+  useEffect(() => {
+    if (!activeId && remoteList.length) {
+      setActiveId(remoteList[0].id);
+    }
+  }, [activeId, remoteList]);
+
   const activateRemote = useCallback(async (id) => {
-    const remote = remotes[id];
+    const remote = remoteLoader.getRemote(id);
     if (!remote) {
       setStatus({ loading: false, error: new Error(`Unknown remote ${id}`) });
       return;
@@ -76,7 +32,7 @@ const App = () => {
     setStatus({ loading: true, error: null });
 
     try {
-      const module = await loadRemoteModule(remote);
+      const module = await remoteLoader.loadRemoteModule(remote.id);
       if (token !== loadToken.current) {
         return;
       }
@@ -107,22 +63,23 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    activateRemote(activeId);
+    if (activeId) {
+      activateRemote(activeId);
+    }
   }, [activeId, activateRemote]);
 
-  useEffect(
-    () => () => {
-      currentCleanupRef.current?.();
-    },
-    []
-  );
+  useEffect(() => () => {
+    currentCleanupRef.current?.();
+  }, []);
+
+  const currentLabel = remoteLoader.getRemote(activeId)?.label ?? 'Microfrontend';
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Shell App</h1>
         <nav className={styles.nav}>
-          {Object.values(remotes).map((remote) => (
+          {remoteList.map((remote) => (
             <button
               key={remote.id}
               type="button"

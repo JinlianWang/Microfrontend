@@ -1,33 +1,13 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
+import { createMfeMount } from '@lib/createMfeMount.js';
 
-const roots = new WeakMap();
-
-export const mount = (element) => {
-  if (!element) {
-    throw new Error('MFE1 mount target is missing');
-  }
-
-  let root = roots.get(element);
-  if (!root) {
-    root = ReactDOM.createRoot(element);
-    roots.set(element, root);
-  }
-
+const { mount, unmount } = createMfeMount((root) => {
   root.render(
     <React.StrictMode>
       <App />
     </React.StrictMode>
   );
+});
 
-  return () => unmount(element);
-};
-
-export const unmount = (element) => {
-  const root = roots.get(element);
-  if (root) {
-    root.unmount();
-    roots.delete(element);
-  }
-};
+export { mount, unmount };

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
+const sharedDir = fileURLToPath(new URL('../lib', import.meta.url));
 
 export default defineConfig(({ command }) => ({
   plugins: [react()],
@@ -11,8 +12,17 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 5174,
     strictPort: true,
+    fs: {
+      allow: [sharedDir, rootDir],
+    },
+  },
+  resolve: {
+    alias: {
+      '@lib': sharedDir,
+    },
   },
   build: {
+    cssCodeSplit: false,
     manifest: true,
     rollupOptions: {
       input: {
@@ -21,6 +31,9 @@ export default defineConfig(({ command }) => ({
       },
       output: {
         entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name][extname]',
+        minifyInternalExports: false,
       },
     },
   },

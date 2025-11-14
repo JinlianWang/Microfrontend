@@ -13,18 +13,18 @@ echo "Building shell..."
 cd "$ROOT_DIR/shell"
 npm install
 npm run build
-cp -r dist/* "$NGINX_HTML_DIR/"
+cp -a dist/. "$NGINX_HTML_DIR/"
 
 echo "Building mfe1..."
 cd "$ROOT_DIR/mfe1"
 npm install
 npm run build
-cp -r dist/* "$NGINX_HTML_DIR/mfe1/"
+cp -a dist/. "$NGINX_HTML_DIR/mfe1/"
 
 echo "Building mfe2..."
 cd "$ROOT_DIR/mfe2"
 npm install
 npm run build
-cp -r dist/* "$NGINX_HTML_DIR/mfe2/"
+cp -a dist/. "$NGINX_HTML_DIR/mfe2/"
 
 echo "✅ All apps built and copied to nginx/html/"
