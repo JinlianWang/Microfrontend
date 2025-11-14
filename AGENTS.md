@@ -4,14 +4,14 @@
 - `shell/`, `mfe1/`, `mfe2/` each contain an independent Vite + React bundle with their own `src/`, `public/`, and `vite.config.js`. The shell is mounted at `/`, while `mfe1` and `mfe2` live under `/mfe1/` and `/mfe2/` respectively.
 - `lib/` hosts reusable utilities (`createMfeMount`, `createRemoteLoader`, etc.) consumed by every bundle.
 - `nginx/` holds the deployment assets: `html/` (populated by builds) and `default.conf` for routing.
-- `build-and-copy.sh` orchestrates production builds and copies artifacts into `nginx/html`. `docker-compose.yml` boots the Nginx reverse proxy that serves everything on `localhost:8080`.
+- `dist-all.sh` orchestrates production builds, copies artifacts into `nginx/html`, and then runs `docker compose up` so the reverse proxy serves everything on `localhost:8080` immediately.
 
 ## Build, Test, and Development Commands
 - `npm install` (run inside each `shell`, `mfe1`, `mfe2` directory) installs dependencies.
 - `./dev-all.sh` launches every Vite dev server on known ports (shell:5173, mfe1:5174, mfe2:5175) and proxies `/mfe1` + `/mfe2` through the shell for a single origin workflow. The shell dynamically imports each remote's `remoteEntry.js` via the shared loader so the header stays mounted while the content swaps. Use `Ctrl+C` to stop. When hitting an MFE dev server directly, open `http://localhost:5174/` or `http://localhost:5175/`.
 - `npm run dev` inside each app still works if you prefer managing the processes manually.
-- `npm run build` produces static assets under `dist/`. The `./build-and-copy.sh` script runs installs, builds all apps, and syncs outputs into `nginx/html/` for serving.
-- Docker dist workflow: run `./build-and-copy.sh` to refresh `nginx/html/`, then `docker compose up` to serve the assets behind Nginx (`/`, `/mfe1/`, `/mfe2/`). Stop with `Ctrl+C` or `docker compose down` when done. The shell always uses `.vite/manifest.json` to pick up the right hashed `remoteEntry.js` per MFE.
+- `npm run build` produces static assets under `dist/`. The `./dist-all.sh` script runs installs, builds all apps, syncs outputs into `nginx/html/`, and kicks off `docker compose up` for serving.
+- Docker dist workflow: run `./dist-all.sh` to refresh `nginx/html/` and launch the Nginx proxy (`/`, `/mfe1/`, `/mfe2/`). Stop with `Ctrl+C` or `docker compose down` when done. The shell always uses `.vite/manifest.json` to pick up the right hashed `remoteEntry.js` per MFE.
 
 ## Coding Style & Naming Conventions
 - Use modern React with functional components and hooks where possible. Keep files in `src/` camelCase (e.g., `AppHeader.jsx`) and React components in PascalCase.
@@ -20,7 +20,7 @@
 
 ## Testing Guidelines
 - No automated tests exist yet. If you add them, colocate with the feature (e.g., `src/Button.test.jsx`) and use `vitest` or `jest`. Document the chosen runner in `package.json` scripts and update this guide.
-- Manual regression: after significant changes run `./build-and-copy.sh` and `docker compose up` to verify routing for `/`, `/mfe1/`, and `/mfe2/`.
+- Manual regression: after significant changes run `./dist-all.sh` to rebuild everything and bring up the proxy for `/`, `/mfe1/`, and `/mfe2/`.
 
 ## Commit & Pull Request Guidelines
 - Craft commits around a single concern; prefer the imperative mood (e.g., `Add link from shell to MFE2 docs`).

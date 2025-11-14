@@ -10,7 +10,7 @@ This project demonstrates a local microfrontend architecture using Vite and Reac
   - `createMfeMount.js` exposes consistent `mount`/`unmount` helpers per MFE.
   - `createRemoteLoader.js` discovers remote bundles via `.vite/manifest.json`.
 - `remoteEntry.js` (inside each MFE): exposes `mount`/`unmount` helpers so the shell can attach/detach the bundle on demand. The Vite build also emits a `manifest.json` describing the concrete file name for that entry, which the shell reads at runtime when running behind Nginx.
-- `build-and-copy.sh`: builds every app (running `npm install` + `npm run build` for each), wipes `nginx/html`, and copies the compiled `dist/` output into `nginx/html`, nesting the MFEs into `nginx/html/mfe1` and `nginx/html/mfe2`.
+- `dist-all.sh`: builds every app (running `npm install` + `npm run build` for each), wipes `nginx/html`, copies the compiled `dist/` output into `nginx/html`, and then starts `docker compose up` so the freshly built assets are served immediately.
 - `nginx/`: contains `default.conf`, which serves the shell at `/` and rewrites `/mfe1/` and `/mfe2/` to the static bundles, using `try_files` so direct deep links fall back to the correct `index.html`.
 - `docker-compose.yml`: runs an `nginx:alpine` container that mounts `nginx/html` and `default.conf`, exposing the proxy on `localhost:8080`.
 
@@ -23,7 +23,7 @@ microfrontend/
 ├── mfe2/
 ├── nginx/
 │   └── default.conf
-├── build-and-copy.sh
+├── dist-all.sh
 └── docker-compose.yml
 ```
 
@@ -56,18 +56,14 @@ cd microfrontend
 ### Docker dist workflow (production parity)
 
 1. Install Docker Desktop or Docker Engine and confirm `docker --version`.
-2. Build/stage all assets:
+2. Build/stage all assets and start Nginx in one shot:
    ```bash
-   ./build-and-copy.sh
+   ./dist-all.sh
    ```
-3. Serve via Nginx:
-   ```bash
-   docker compose up
-   ```
+   - The script installs deps (if needed), builds every app, copies outputs into `nginx/html`, and then runs `docker compose up`.
    - Shell: `http://localhost:8080`
    - Standalone MFEs: `/mfe1`, `/mfe2`
-4. After code changes, rerun the build script and `docker compose restart` to refresh the staged files.
-5. Stop the proxy with `Ctrl+C` or `docker compose down` when you’re done.
+3. Press `Ctrl+C` to stop the proxy. Re-run `./dist-all.sh` whenever you need fresh builds or to restart the container.
 
 ---
 
