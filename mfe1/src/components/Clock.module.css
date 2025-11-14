@@ -1,0 +1,90 @@
+.clockWidget {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 5px 20px rgba(15, 23, 42, 0.12);
+  background: radial-gradient(circle at top, #f8fafc, #e2e8f0);
+  min-width: 260px;
+}
+
+.clockFace {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 6px solid #0f172a;
+  background: #fff;
+  box-shadow: inset 0 0 10px rgba(15, 23, 42, 0.15);
+}
+
+.tick {
+  position: absolute;
+  width: 4px;
+  height: 14px;
+  background: #0f172a;
+  top: 8px;
+  left: calc(50% - 2px);
+  transform-origin: center 102px;
+  opacity: 0.35;
+}
+
+.tickMajor {
+  height: 20px;
+  opacity: 0.75;
+}
+
+.hand {
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  transform-origin: bottom center;
+  border-radius: 999px;
+}
+
+.hourHand {
+  width: 8px;
+  height: 55px;
+  background: #0f172a;
+}
+
+.minuteHand {
+  width: 6px;
+  height: 80px;
+  background: #1d4ed8;
+}
+
+.secondHand {
+  width: 3px;
+  height: 90px;
+  background: #f97316;
+}
+
+.centerCap {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #0f172a;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+}
+
+.digitalLabel {
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.metaRow {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.9rem;
+  color: #475569;
+}
