@@ -1,11 +1,27 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
-export default defineConfig({
+const rootDir = fileURLToPath(new URL('.', import.meta.url));
+
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: '/mfe2/',
+  base: command === 'build' ? '/mfe2/' : '/',
   server: {
     port: 5175,
     strictPort: true,
   },
-});
+  build: {
+    manifest: true,
+    rollupOptions: {
+      input: {
+        main: resolve(rootDir, 'index.html'),
+        remoteEntry: resolve(rootDir, 'src/remoteEntry.js'),
+      },
+      output: {
+        entryFileNames: 'assets/[name].js',
+      },
+    },
+  },
+}));

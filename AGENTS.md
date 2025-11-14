@@ -7,10 +7,10 @@
 
 ## Build, Test, and Development Commands
 - `npm install` (run inside each `shell`, `mfe1`, `mfe2` directory) installs dependencies.
-- `./dev-all.sh` launches every Vite dev server on known ports (shell:5173, mfe1:5174, mfe2:5175) and proxies `/mfe1` + `/mfe2` through the shell for a single origin workflow. Use `Ctrl+C` to stop. When hitting the MFE servers directly, remember their dev URLs are `http://localhost:5174/mfe1/` and `http://localhost:5175/mfe2/`.
+- `./dev-all.sh` launches every Vite dev server on known ports (shell:5173, mfe1:5174, mfe2:5175) and proxies `/mfe1` + `/mfe2` through the shell for a single origin workflow. The shell dynamically imports each remote's `remoteEntry.js` so the header stays mounted while the content swaps. Use `Ctrl+C` to stop. When hitting an MFE dev server directly, open `http://localhost:5174/` or `http://localhost:5175/`.
 - `npm run dev` inside each app still works if you prefer managing the processes manually.
 - `npm run build` produces static assets under `dist/`. The `./build-and-copy.sh` script runs installs, builds all apps, and syncs outputs into `nginx/html/` for serving.
-- `docker compose up` serves the most recent build artifacts through Nginx; stop with `Ctrl+C`.
+- `docker compose up` serves the most recent build artifacts through Nginx; the shell uses each MFE's `.vite/manifest.json` to locate `/mfe*/assets/remoteEntry.js` at runtime. Stop with `Ctrl+C`.
 
 ## Coding Style & Naming Conventions
 - Use modern React with functional components and hooks where possible. Keep files in `src/` camelCase (e.g., `AppHeader.jsx`) and React components in PascalCase.

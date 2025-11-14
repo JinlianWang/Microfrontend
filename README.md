@@ -4,8 +4,9 @@ This project demonstrates a local microfrontend architecture using Vite and Reac
 
 ## 🧠 How It Works
 
-- `shell/`: the host shell rendered at `/`. It is just a Vite/React bundle that links to each microfrontend. Because it is mounted at the root, its `vite.config.js` keeps `base: '/'` so assets resolve from the site root.
+- `shell/`: the host shell rendered at `/`. It keeps a persistent header/nav and dynamically mounts whichever microfrontend you pick into a single content slot—no full page reloads. During development it imports each remote's dev entry directly; in production it looks up the emitted bundle via the remote manifest.
 - `mfe1/` & `mfe2/`: independent Vite/React bundles mounted under `/mfe1/` and `/mfe2/`. Their configs set `base` to their respective subpaths so Vite emits assets with the proper prefixes.
+- `remoteEntry.js` (inside each MFE): exposes `mount`/`unmount` helpers so the shell can attach/detach the bundle on demand. The Vite build also emits a `manifest.json` describing the concrete file name for that entry, which the shell reads at runtime when running behind Nginx.
 - `build-and-copy.sh`: builds every app (running `npm install` + `npm run build` for each), wipes `nginx/html`, and copies the compiled `dist/` output into `nginx/html`, nesting the MFEs into `nginx/html/mfe1` and `nginx/html/mfe2`.
 - `nginx/`: contains `default.conf`, which serves the shell at `/` and rewrites `/mfe1/` and `/mfe2/` to the static bundles, using `try_files` so direct deep links fall back to the correct `index.html`.
 - `docker-compose.yml`: runs an `nginx:alpine` container that mounts `nginx/html` and `default.conf`, exposing the proxy on `localhost:8080`.
@@ -59,14 +60,14 @@ To work on all MFEs with hot reload on a single origin, start every Vite dev ser
 ./dev-all.sh
 ```
 
-The script boots `shell` on `http://localhost:5173/` and proxies `/mfe1/` and `/mfe2/` (including their assets + HMR connections) to the other dev servers, so you can navigate all apps at one URL. Stop with `Ctrl+C` (the script tears down every process for you).
+The script boots `shell` on `http://localhost:5173/` and proxies `/mfe1/` and `/mfe2/` (including their assets + HMR connections) to the other dev servers. Clicking the nav buttons swaps the content slot by dynamically importing each remote's `remoteEntry.js`, so you can test composition without reloading. Stop with `Ctrl+C` (the script tears down every process for you).
 
-Prefer running servers manually? Start each in its directory instead (the `/mfe1/` and `/mfe2/` bases are needed even in dev so the proxy knows which bundle to serve):
+Prefer running servers manually? Start each in its directory instead:
 
 ```bash
 cd shell && npm run dev -- --port 5173 &
-cd mfe1 && npm run dev -- --port 5174 & # Visit http://localhost:5174/mfe1/
-cd mfe2 && npm run dev -- --port 5175 & # Visit http://localhost:5175/mfe2/
+cd mfe1 && npm run dev -- --port 5174 &
+cd mfe2 && npm run dev -- --port 5175 &
 ```
 
 ### 5. Build and stage assets for Nginx
@@ -110,5 +111,6 @@ If the container is stopped, run `docker compose up` (or `-d`) after the build i
 
 - Apps use Vite with `base` path configured per route.
 - Output of each app is served by Nginx from separate folders.
+- Each MFE build generates `.vite/manifest.json` (pointing at `assets/remoteEntry.js`); the shell reads that manifest to figure out which bundle to load when served via Nginx. Keep these files with the deployed assets.
 
 Happy hacking! 🎉
