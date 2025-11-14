@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
+import styles from './App.module.css';
 
 const remotes = {
   mfe1: {
@@ -117,19 +118,19 @@ const App = () => {
   );
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>Shell App</h1>
-        <nav style={styles.nav}>
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <h1 className={styles.title}>Shell App</h1>
+        <nav className={styles.nav}>
           {Object.values(remotes).map((remote) => (
             <button
               key={remote.id}
               type="button"
               onClick={() => setActiveId(remote.id)}
-              style={{
-                ...styles.navButton,
-                ...(activeId === remote.id ? styles.navButtonActive : {}),
-              }}
+              className={[
+                styles.navButton,
+                activeId === remote.id ? styles.navButtonActive : '',
+              ].join(' ')}
             >
               {remote.label}
             </button>
@@ -137,86 +138,19 @@ const App = () => {
         </nav>
       </header>
 
-      <main style={styles.content}>
+      <main className={styles.content}>
         {status.loading && (
-          <div style={styles.message}>Loading {currentLabel}…</div>
+          <div className={styles.message}>Loading {currentLabel}…</div>
         )}
         {status.error && (
-          <div style={{ ...styles.message, ...styles.error }}>
+          <div className={[styles.message, styles.error].join(' ')}>
             Failed to load {currentLabel}: {status.error.message}
           </div>
         )}
-        <div ref={containerRef} style={styles.mfeContainer} />
+        <div ref={containerRef} className={styles.mfeContainer} />
       </main>
     </div>
   );
-};
-
-const styles = {
-  page: {
-    fontFamily: 'sans-serif',
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: '#f5f5f5',
-    color: '#222',
-  },
-  header: {
-    padding: '1rem 2rem',
-    backgroundColor: '#111827',
-    color: '#fff',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-  },
-  title: {
-    margin: 0,
-    fontSize: '1.5rem',
-  },
-  nav: {
-    display: 'flex',
-    gap: '0.75rem',
-  },
-  navButton: {
-    border: '1px solid #374151',
-    background: 'transparent',
-    color: '#fff',
-    padding: '0.35rem 0.75rem',
-    borderRadius: '0.375rem',
-    cursor: 'pointer',
-    fontSize: '0.95rem',
-  },
-  navButtonActive: {
-    background: '#2563eb',
-    border: '1px solid #2563eb',
-  },
-  content: {
-    flex: 1,
-    padding: '1rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-  },
-  message: {
-    backgroundColor: '#111827',
-    color: '#fff',
-    padding: '0.5rem 0.75rem',
-    borderRadius: '0.375rem',
-    fontSize: '0.95rem',
-  },
-  error: {
-    backgroundColor: '#fee2e2',
-    color: '#b91c1c',
-    border: '1px solid #fecaca',
-  },
-  mfeContainer: {
-    flex: 1,
-    border: '1px solid #d1d5db',
-    borderRadius: '0.5rem',
-    backgroundColor: '#fff',
-    overflow: 'auto',
-  },
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(
