@@ -62,16 +62,29 @@ The script builds all apps and copies `dist/` outputs into `nginx/html/`.
 ### 5. Start the Dockerized Nginx proxy
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 Leave this running (Ctrl+C to stop) and it will serve the staged assets.
+
+> If Docker errors about `docker-credential-desktop`, remove the `credsStore` key from `~/.docker/config.json` so Compose can pull public images anonymously.
 
 ### 6. Verify in the browser
 
 - Shell: [http://localhost:8080](http://localhost:8080)
 - MFE1: [http://localhost:8080/mfe1/](http://localhost:8080/mfe1/)
 - MFE2: [http://localhost:8080/mfe2/](http://localhost:8080/mfe2/)
+
+### 7. Pick up code changes
+
+Docker only serves whatever lives in `nginx/html`. After editing any app, rerun the build script and bounce the container so the new static files are staged and reloaded:
+
+```bash
+./build-and-copy.sh
+docker compose restart
+```
+
+If the container is stopped, run `docker compose up` (or `-d`) after the build instead.
 
 ---
 

@@ -9,7 +9,7 @@
 - `npm install` (run inside each `shell`, `mfe1`, `mfe2` directory) installs dependencies.
 - `npm run dev` starts the corresponding Vite dev server; use separate terminals per app while iterating.
 - `npm run build` produces static assets under `dist/`. The `./build-and-copy.sh` script runs installs, builds all apps, and syncs outputs into `nginx/html/` for serving.
-- `docker-compose up` serves the most recent build artifacts through Nginx; stop with `Ctrl+C`.
+- `docker compose up` serves the most recent build artifacts through Nginx; stop with `Ctrl+C`.
 
 ## Coding Style & Naming Conventions
 - Use modern React with functional components and hooks where possible. Keep files in `src/` camelCase (e.g., `AppHeader.jsx`) and React components in PascalCase.
@@ -18,7 +18,7 @@
 
 ## Testing Guidelines
 - No automated tests exist yet. If you add them, colocate with the feature (e.g., `src/Button.test.jsx`) and use `vitest` or `jest`. Document the chosen runner in `package.json` scripts and update this guide.
-- Manual regression: after significant changes run `./build-and-copy.sh` and `docker-compose up` to verify routing for `/`, `/mfe1/`, and `/mfe2/`.
+- Manual regression: after significant changes run `./build-and-copy.sh` and `docker compose up` to verify routing for `/`, `/mfe1/`, and `/mfe2/`.
 
 ## Commit & Pull Request Guidelines
 - Craft commits around a single concern; prefer the imperative mood (e.g., `Add link from shell to MFE2 docs`).

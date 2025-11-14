@@ -3,6 +3,6 @@ import ReactDOM from 'react-dom/client';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <h2>Hello from MFE1</h2>
+    <h2>Hello from Lucas</h2>
   </React.StrictMode>
 );
