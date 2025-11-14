@@ -189,7 +189,7 @@ const styles = {
   },
   navButtonActive: {
     background: '#2563eb',
-    borderColor: '#2563eb',
+    border: '1px solid #2563eb',
   },
   content: {
     flex: 1,
