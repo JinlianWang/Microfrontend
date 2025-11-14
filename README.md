@@ -51,7 +51,25 @@ cd ../mfe2 && npm install
 cd ..
 ```
 
-### 4. Build and stage assets for Nginx
+### 4. Live development with Vite proxies
+
+To work on all MFEs with hot reload on a single origin, start every Vite dev server with the helper script:
+
+```bash
+./dev-all.sh
+```
+
+The script boots `shell` on `http://localhost:5173/` and proxies `/mfe1/` and `/mfe2/` (including their assets + HMR connections) to the other dev servers, so you can navigate all apps at one URL. Stop with `Ctrl+C` (the script tears down every process for you).
+
+Prefer running servers manually? Start each in its directory instead (the `/mfe1/` and `/mfe2/` bases are needed even in dev so the proxy knows which bundle to serve):
+
+```bash
+cd shell && npm run dev -- --port 5173 &
+cd mfe1 && npm run dev -- --port 5174 & # Visit http://localhost:5174/mfe1/
+cd mfe2 && npm run dev -- --port 5175 & # Visit http://localhost:5175/mfe2/
+```
+
+### 5. Build and stage assets for Nginx
 
 ```bash
 ./build-and-copy.sh
@@ -59,7 +77,7 @@ cd ..
 
 The script builds all apps and copies `dist/` outputs into `nginx/html/`.
 
-### 5. Start the Dockerized Nginx proxy
+### 6. Start the Dockerized Nginx proxy
 
 ```bash
 docker compose up
@@ -69,13 +87,13 @@ Leave this running (Ctrl+C to stop) and it will serve the staged assets.
 
 > If Docker errors about `docker-credential-desktop`, remove the `credsStore` key from `~/.docker/config.json` so Compose can pull public images anonymously.
 
-### 6. Verify in the browser
+### 7. Verify in the browser
 
 - Shell: [http://localhost:8080](http://localhost:8080)
 - MFE1: [http://localhost:8080/mfe1/](http://localhost:8080/mfe1/)
 - MFE2: [http://localhost:8080/mfe2/](http://localhost:8080/mfe2/)
 
-### 7. Pick up code changes
+### 8. Pick up code changes
 
 Docker only serves whatever lives in `nginx/html`. After editing any app, rerun the build script and bounce the container so the new static files are staged and reloaded:
 
