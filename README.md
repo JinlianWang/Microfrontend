@@ -7,6 +7,7 @@ This project demonstrates a local microfrontend architecture using Vite and Reac
 - `shell/`: the host shell rendered at `/`. It keeps a persistent header/nav and dynamically mounts whichever microfrontend you pick into a single content slot—no full page reloads. During development it imports each remote's dev entry directly; in production it looks up the emitted bundle via the remote manifest.
 - `mfe1/` & `mfe2/`: independent Vite/React bundles mounted under `/mfe1/` and `/mfe2/`. Their configs set `base` to their respective subpaths so Vite emits assets with the proper prefixes.
 - `remoteEntry.js` (inside each MFE): exposes `mount`/`unmount` helpers so the shell can attach/detach the bundle on demand. The Vite build also emits a `manifest.json` describing the concrete file name for that entry, which the shell reads at runtime when running behind Nginx.
+- `dev-all.sh`: boots every Vite dev server at once, wires the shell proxy so `/mfe1` and `/mfe2` resolve correctly on `http://localhost:5173`, streams logs in one terminal, and tears everything down when you hit `Ctrl+C`.
 - `dist-all.sh`: builds every app (running `npm install` + `npm run build` for each), wipes `nginx/html`, copies the compiled `dist/` output into the right subfolders, and finishes by running `docker compose up` so the latest bundle is served immediately.
 - `nginx/`: contains `default.conf`, which serves the shell at `/` and rewrites `/mfe1/` and `/mfe2/` to the static bundles, using `try_files` so direct deep links fall back to the correct `index.html`.
 - `docker-compose.yml`: runs an `nginx:alpine` container that mounts `nginx/html` and `default.conf`, exposing the proxy on `localhost:8080`.
@@ -20,6 +21,7 @@ microfrontend/
 ├── mfe2/
 ├── nginx/
 │   └── default.conf
+├── dev-all.sh
 ├── dist-all.sh
 └── docker-compose.yml
 ```
@@ -43,9 +45,15 @@ microfrontend/
    ./dev-all.sh
    ```
 
-   The helper script boots `shell` on `http://localhost:5173/` and proxies `/mfe1/` + `/mfe2/` (including assets and HMR) to the remote dev servers. Clicking the nav buttons swaps the content slot by dynamically importing each remote's `remoteEntry.js`, so you can exercise the full composition without reloading. Stop with `Ctrl+C` to shut down all servers.
+   What the script does for you:
 
-   Prefer running them manually? Launch each app in its own terminal:
+   - Boots all three Vite dev servers (shell on 5173, MFE1 on 5174, MFE2 on 5175) and keeps their logs streaming in one terminal.
+   - Proxies `/mfe1` + `/mfe2` through the shell’s dev server (see `shell/vite.config.js`), so the navigation bar can dynamically import each remote’s `remoteEntry.js` from a single origin.
+   - Tears everything down cleanly when you hit `Ctrl+C` thanks to the trap in `dev-all.sh`, so you never leave orphaned processes behind.
+
+3. **Verify locally** – Open `http://localhost:5173/` for the shell, or talk to a remote directly at `http://localhost:5174/` (MFE1) / `http://localhost:5175/` (MFE2) when you need to debug them in isolation.
+
+4. **Manual alternative** – Prefer your own process manager? Launch each app in its directory:
 
    ```bash
    cd shell && npm run dev -- --port 5173 &
