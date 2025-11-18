@@ -28,3 +28,7 @@ npm run build
 cp -r dist/* "$NGINX_HTML_DIR/mfe2/"
 
 echo "✅ All apps built and copied to nginx/html/"
+
+cd "$ROOT_DIR"
+echo "Starting docker compose (Ctrl+C to stop when ready)..."
+docker compose up

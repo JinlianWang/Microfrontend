@@ -7,7 +7,7 @@ This project demonstrates a local microfrontend architecture using Vite and Reac
 - `shell/`: the host shell rendered at `/`. It keeps a persistent header/nav and dynamically mounts whichever microfrontend you pick into a single content slot—no full page reloads. During development it imports each remote's dev entry directly; in production it looks up the emitted bundle via the remote manifest.
 - `mfe1/` & `mfe2/`: independent Vite/React bundles mounted under `/mfe1/` and `/mfe2/`. Their configs set `base` to their respective subpaths so Vite emits assets with the proper prefixes.
 - `remoteEntry.js` (inside each MFE): exposes `mount`/`unmount` helpers so the shell can attach/detach the bundle on demand. The Vite build also emits a `manifest.json` describing the concrete file name for that entry, which the shell reads at runtime when running behind Nginx.
-- `build-and-copy.sh`: builds every app (running `npm install` + `npm run build` for each), wipes `nginx/html`, and copies the compiled `dist/` output into `nginx/html`, nesting the MFEs into `nginx/html/mfe1` and `nginx/html/mfe2`.
+- `dist-all.sh`: builds every app (running `npm install` + `npm run build` for each), wipes `nginx/html`, copies the compiled `dist/` output into the right subfolders, and finishes by running `docker compose up` so the latest bundle is served immediately.
 - `nginx/`: contains `default.conf`, which serves the shell at `/` and rewrites `/mfe1/` and `/mfe2/` to the static bundles, using `try_files` so direct deep links fall back to the correct `index.html`.
 - `docker-compose.yml`: runs an `nginx:alpine` container that mounts `nginx/html` and `default.conf`, exposing the proxy on `localhost:8080`.
 
@@ -20,90 +20,64 @@ microfrontend/
 ├── mfe2/
 ├── nginx/
 │   └── default.conf
-├── build-and-copy.sh
+├── dist-all.sh
 └── docker-compose.yml
 ```
 
-## 🚀 Local Development Setup
+## 🚀 Development Workflow
 
-### 1. Clone and enter the repo
+1. **Clone and install dependencies**
 
-```bash
-git clone <repo-url>
-cd microfrontend
-```
+   ```bash
+   git clone <repo-url>
+   cd microfrontend
+   cd shell && npm install
+   cd ../mfe1 && npm install
+   cd ../mfe2 && npm install
+   cd ..
+   ```
 
-### 2. Prepare Docker
+2. **Start every dev server**
 
-Install Docker Desktop (macOS/Windows) or Docker Engine (Linux) if it is not already available, start it, then confirm it responds:
+   ```bash
+   ./dev-all.sh
+   ```
 
-```bash
-docker --version
-```
+   The helper script boots `shell` on `http://localhost:5173/` and proxies `/mfe1/` + `/mfe2/` (including assets and HMR) to the remote dev servers. Clicking the nav buttons swaps the content slot by dynamically importing each remote's `remoteEntry.js`, so you can exercise the full composition without reloading. Stop with `Ctrl+C` to shut down all servers.
 
-### 3. Install app dependencies
+   Prefer running them manually? Launch each app in its own terminal:
 
-`npm` is already available, so install packages for each app:
+   ```bash
+   cd shell && npm run dev -- --port 5173 &
+   cd mfe1 && npm run dev -- --port 5174 &
+   cd mfe2 && npm run dev -- --port 5175 &
+   ```
 
-```bash
-cd shell && npm install
-cd ../mfe1 && npm install
-cd ../mfe2 && npm install
-cd ..
-```
+## 🐳 Distribution Workflow (Docker)
 
-### 4. Live development with Vite proxies
+1. **Prepare Docker** – Install Docker Desktop (macOS/Windows) or Docker Engine (Linux), start it, and confirm it responds with `docker --version`.
 
-To work on all MFEs with hot reload on a single origin, start every Vite dev server with the helper script:
+2. **Build, stage, and serve**
 
-```bash
-./dev-all.sh
-```
+   ```bash
+   ./dist-all.sh
+   ```
 
-The script boots `shell` on `http://localhost:5173/` and proxies `/mfe1/` and `/mfe2/` (including their assets + HMR connections) to the other dev servers. Clicking the nav buttons swaps the content slot by dynamically importing each remote's `remoteEntry.js`, so you can test composition without reloading. Stop with `Ctrl+C` (the script tears down every process for you).
+   The script wipes `nginx/html`, builds each app, copies the fresh `dist/` outputs into place, and finally runs `docker compose up` so the reverse proxy immediately serves the new bundles. Leave the process running (Ctrl+C to stop) while you test.
 
-Prefer running servers manually? Start each in its directory instead:
+   Need a readable bundle? Any `vite build` command accepts `--minify false`, so you can run `npm run build -- --minify false` inside `shell`, `mfe1`, or `mfe2` (or temporarily edit `dist-all.sh` to pass the same flag) to emit un-minified JS while keeping everything else identical.
 
-```bash
-cd shell && npm run dev -- --port 5173 &
-cd mfe1 && npm run dev -- --port 5174 &
-cd mfe2 && npm run dev -- --port 5175 &
-```
+   > If Docker errors about `docker-credential-desktop`, remove the `credsStore` key from `~/.docker/config.json` so Compose can pull public images anonymously.
 
-### 5. Build and stage assets for Nginx
+3. **Verify in the browser**
 
-```bash
-./build-and-copy.sh
-```
+   - Shell: [http://localhost:8080](http://localhost:8080)
+   - MFE1: [http://localhost:8080/mfe1/](http://localhost:8080/mfe1/)
+   - MFE2: [http://localhost:8080/mfe2/](http://localhost:8080/mfe2/)
 
-The script builds all apps and copies `dist/` outputs into `nginx/html/`.
+4. **Rebuild after code changes** – Docker only serves whatever lives in `nginx/html`. After editing any app, stop the running `docker compose` process (Ctrl+C) and rerun `./dist-all.sh` so fresh assets are staged and served.
 
-### 6. Start the Dockerized Nginx proxy
-
-```bash
-docker compose up
-```
-
-Leave this running (Ctrl+C to stop) and it will serve the staged assets.
-
-> If Docker errors about `docker-credential-desktop`, remove the `credsStore` key from `~/.docker/config.json` so Compose can pull public images anonymously.
-
-### 7. Verify in the browser
-
-- Shell: [http://localhost:8080](http://localhost:8080)
-- MFE1: [http://localhost:8080/mfe1/](http://localhost:8080/mfe1/)
-- MFE2: [http://localhost:8080/mfe2/](http://localhost:8080/mfe2/)
-
-### 8. Pick up code changes
-
-Docker only serves whatever lives in `nginx/html`. After editing any app, rerun the build script and bounce the container so the new static files are staged and reloaded:
-
-```bash
-./build-and-copy.sh
-docker compose restart
-```
-
-If the container is stopped, run `docker compose up` (or `-d`) after the build instead.
+   If Compose is running in another terminal, rerun `./dist-all.sh` to rebuild and then execute `docker compose restart` so Nginx reloads the new files.
 
 ---
 
@@ -112,5 +86,22 @@ If the container is stopped, run `docker compose up` (or `-d`) after the build i
 - Apps use Vite with `base` path configured per route.
 - Output of each app is served by Nginx from separate folders.
 - Each MFE build generates `.vite/manifest.json` (pointing at `assets/remoteEntry.js`); the shell reads that manifest to figure out which bundle to load when served via Nginx. Keep these files with the deployed assets.
+
+## 🔄 How the Shell Loads MFEs After a Click
+
+1. **User interaction** – The header buttons inside `shell/src/index.jsx` simply update React state (`setActiveId(remote.id)`). That state flows into a `useEffect` hook which triggers `activateRemote(activeId)` every time the selection changes.
+2. **Remote lookup** – `activateRemote` starts by calling `resolveRemoteUrl`. In dev it returns the hard-coded dev-server entry (e.g., `http://localhost:5174/src/remoteEntry.js`). In production it fetches `/mfe*/.vite/manifest.json`, looks for the `src/remoteEntry.js` entry, and builds a URL such as `/mfe1/assets/remoteEntry.js`.
+3. **Dynamic import** – `loadRemoteModule` caches modules per remote ID, performs a dynamic `import()` on the resolved URL, and guarantees the result exposes a `mount` function. The `/* @vite-ignore */` comment keeps Vite from bundling the remote URL at build time so that requests stay dynamic.
+4. **Mount lifecycle** – Before showing the new MFE, the shell runs the cleanup function returned by the previous `mount` call (or invokes `module.unmount`). It then empties the shared container `<div>` and invokes `module.mount(container)`. Each remote’s `remoteEntry.js` re-exports `mount`/`unmount` from `bootstrap.jsx`, where a React root is created (or reused) inside that container.
+5. **Cleanup guarantees** – The `mount` implementation returns a disposer that unmounts the MFE when called. The shell stores that disposer in a ref so it can be run whenever the user switches tabs or when the shell unmounts entirely. This keeps React roots isolated and prevents memory leaks.
+
+This flow means every button click only swaps the content area while the shell’s header/nav stay mounted. All orchestration lives in `shell/src/index.jsx`, and every remote just needs to expose the `mount` contract.
+
+## 🧭 Why Dev Uses Direct Imports but Prod Reads the Manifest
+
+- **Dev mode (Vite servers)** – When running `./dev-all.sh` the shell proxies `/mfe1` and `/mfe2` to their Vite dev servers. Those servers host the source files directly, so `resolveRemoteUrl` returns the fixed `devEntry` for each remote. That gives you hot-module reloading and avoids building assets on every save.
+- **Production mode (static assets)** – After `npm run build`, Vite emits hashed filenames under each `dist/assets/` folder plus `.vite/manifest.json` describing how source files map to those hashed outputs. Because the hash changes per build, the shell cannot hard-code the path, so it fetches the manifest at runtime and pulls the path for `src/remoteEntry.js`.
+- **Single source of truth** – Both dev and prod bundles are built from the exact same source files (`remoteEntry.js`, `bootstrap.jsx`, `App.jsx`, etc.). The only difference is where the file is hosted (dev server memory vs. Nginx static assets) and how the final filename is derived (direct path vs. manifest lookup).
+- **Parity checks** – To ensure behavior stays identical, exercise both workflows: use `./dev-all.sh` to verify runtime integration with live dev servers, and run `./dist-all.sh` to confirm the manifest-driven lookup works with the built artifacts served through Nginx.
 
 Happy hacking! 🎉
