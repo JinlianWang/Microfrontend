@@ -5,7 +5,7 @@ This project demonstrates a local microfrontend architecture using Vite and Reac
 ## 🧠 How It Works
 
 - `shell/`: the host shell rendered at `/`. It keeps a persistent header/nav and dynamically mounts whichever microfrontend you pick into a single content slot—no full page reloads. During development it imports each remote's dev entry directly; in production it looks up the emitted bundle via the remote manifest.
-- `mfe1/` & `mfe2/`: independent Vite/React bundles mounted under `/mfe1/` and `/mfe2/`. Their configs set `base` to their respective subpaths so Vite emits assets with the proper prefixes.
+- `mfe1/` & `mfe2/`: independent Vite/React bundles mounted under `/mfe1/` and `/mfe2/`. Their configs set `base` to their respective subpaths so Vite emits assets with the proper prefixes. MFE1 now publishes a reusable `<mfe1-shared-timer>` web component (registered via `ensureTimerElement`) and MFE2 demonstrates how another remote can dynamically consume it.
 - `remoteEntry.js` (inside each MFE): exposes `mount`/`unmount` helpers so the shell can attach/detach the bundle on demand. The Vite build also emits a `manifest.json` describing the concrete file name for that entry, which the shell reads at runtime when running behind Nginx.
 - `dev-all.sh`: boots every Vite dev server at once, wires the shell proxy so `/mfe1` and `/mfe2` resolve correctly on `http://localhost:5173`, streams logs in one terminal, and tears everything down when you hit `Ctrl+C`.
 - `dist-all.sh`: builds every app (running `npm install` + `npm run build` for each), wipes `nginx/html`, copies the compiled `dist/` output into the right subfolders, and finishes by running `docker compose up` so the latest bundle is served immediately.
@@ -94,6 +94,17 @@ microfrontend/
 - Apps use Vite with `base` path configured per route.
 - Output of each app is served by Nginx from separate folders.
 - Each MFE build generates `.vite/manifest.json` (pointing at `assets/remoteEntry.js`); the shell reads that manifest to figure out which bundle to load when served via Nginx. Keep these files with the deployed assets.
+- `mfe1-shared-timer` is a vanilla web component that dispatches an `elapsed-updated` event with `{ elapsedMs }`. Because it is registered globally, any host (shell, MFE2, or future remotes) can simply drop `<mfe1-shared-timer />` into its DOM after calling `ensureTimerElement()`.
+
+## ⏱️ Cross-MFE Timer Demo
+
+To showcase MFEs communicating without tightly coupling React trees, MFE1 exposes a reusable timer element and MFE2 loads it on demand:
+
+1. **MFE1 defines the element** – See `mfe1/src/timerElement.js`. The element handles its own UI and dispatches `elapsed-updated` events whenever the elapsed time changes. The helper `ensureTimerElement()` (re-exported from `src/remoteEntry.js`) registers it only once.
+2. **MFE2 lazy-loads the remote** – `mfe2/src/remotes/mfe1Timer.js` dynamically imports MFE1’s `remoteEntry`, calls `ensureTimerElement()`, and then returns a `<mfe1-shared-timer>` node that can be inserted anywhere.
+3. **Dialog bridge** – `mfe2/src/components/RemoteTimerBridge.jsx` attaches the element inside a modal when the “Load timer from MFE1” button is pressed. It listens for `elapsed-updated` to keep local React state in sync and mirrors the elapsed duration below the dialog.
+
+Try it out: run `./dev-all.sh`, open `http://localhost:5175/` directly (or view MFE2 through the shell), click the “Load timer from MFE1” button, and interact with the timer inside the dialog. Start/pause/reset actions are handled entirely by the web component, while MFE2 simply reacts to the dispatched events.
 
 ## 🔄 How the Shell Loads MFEs After a Click
 
