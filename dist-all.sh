@@ -13,19 +13,28 @@ echo "Building shell..."
 cd "$ROOT_DIR/shell"
 npm install
 npm run build
-cp -r dist/* "$NGINX_HTML_DIR/"
+cp -R dist/. "$NGINX_HTML_DIR/"
+if [ -f "$NGINX_HTML_DIR/.vite/manifest.json" ]; then
+  cp "$NGINX_HTML_DIR/.vite/manifest.json" "$NGINX_HTML_DIR/manifest.json"
+fi
 
 echo "Building mfe1..."
 cd "$ROOT_DIR/mfe1"
 npm install
 npm run build
-cp -r dist/* "$NGINX_HTML_DIR/mfe1/"
+cp -R dist/. "$NGINX_HTML_DIR/mfe1/"
+if [ -f "$NGINX_HTML_DIR/mfe1/.vite/manifest.json" ]; then
+  cp "$NGINX_HTML_DIR/mfe1/.vite/manifest.json" "$NGINX_HTML_DIR/mfe1/manifest.json"
+fi
 
 echo "Building mfe2..."
 cd "$ROOT_DIR/mfe2"
 npm install
 npm run build
-cp -r dist/* "$NGINX_HTML_DIR/mfe2/"
+cp -R dist/. "$NGINX_HTML_DIR/mfe2/"
+if [ -f "$NGINX_HTML_DIR/mfe2/.vite/manifest.json" ]; then
+  cp "$NGINX_HTML_DIR/mfe2/.vite/manifest.json" "$NGINX_HTML_DIR/mfe2/manifest.json"
+fi
 
 echo "✅ All apps built and copied to nginx/html/"
 

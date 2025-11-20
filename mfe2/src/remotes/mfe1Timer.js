@@ -1,11 +1,31 @@
 const remoteConfig = {
   id: 'mfe1',
   devEntry: 'http://localhost:5174/src/remoteEntry.js',
-  manifestPath: '/mfe1/.vite/manifest.json',
+  manifestPath: '/mfe1/manifest.json',
   basePath: '/mfe1',
 };
 
 let modulePromise;
+const loadedCss = new Set();
+
+const injectCss = (files = []) => {
+  if (typeof document === 'undefined' || !files.length) {
+    return;
+  }
+
+  files.forEach((file) => {
+    if (!file || loadedCss.has(file)) {
+      return;
+    }
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `${remoteConfig.basePath}/${file}`;
+    link.dataset.remoteId = remoteConfig.id;
+    document.head.appendChild(link);
+    loadedCss.add(file);
+  });
+};
 
 const resolveRemoteUrl = async () => {
   if (import.meta.env.DEV) {
@@ -23,6 +43,7 @@ const resolveRemoteUrl = async () => {
     throw new Error('Remote entry file missing from manifest');
   }
 
+  injectCss(entry.css);
   return `${remoteConfig.basePath}/${entry.file}`;
 };
 

@@ -15,12 +15,14 @@ export default defineConfig(({ command }) => ({
   build: {
     manifest: true,
     rollupOptions: {
+      preserveEntrySignatures: 'exports-only',
       input: {
         main: resolve(rootDir, 'index.html'),
         remoteEntry: resolve(rootDir, 'src/remoteEntry.js'),
       },
       output: {
         entryFileNames: 'assets/[name].js',
+        minifyInternalExports: false,
       },
     },
   },

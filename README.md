@@ -93,7 +93,7 @@ microfrontend/
 
 - Apps use Vite with `base` path configured per route.
 - Output of each app is served by Nginx from separate folders.
-- Each MFE build generates `.vite/manifest.json` (pointing at `assets/remoteEntry.js`); the shell reads that manifest to figure out which bundle to load when served via Nginx. Keep these files with the deployed assets.
+- Each MFE build generates `.vite/manifest.json` (pointing at `assets/remoteEntry.js`); `dist-all.sh` copies that file to `<app>/manifest.json` so the shell can fetch it without hitting hidden paths when served via Nginx.
 - `mfe1-shared-timer` is a vanilla web component that dispatches an `elapsed-updated` event with `{ elapsedMs }`. Because it is registered globally, any host (shell, MFE2, or future remotes) can simply drop `<mfe1-shared-timer />` into its DOM after calling `ensureTimerElement()`.
 
 ## ⏱️ Cross-MFE Timer Demo
@@ -109,7 +109,7 @@ Try it out: run `./dev-all.sh`, open `http://localhost:5175/` directly (or view 
 ## 🔄 How the Shell Loads MFEs After a Click
 
 1. **User interaction** – The header buttons inside `shell/src/index.jsx` simply update React state (`setActiveId(remote.id)`). That state flows into a `useEffect` hook which triggers `activateRemote(activeId)` every time the selection changes.
-2. **Remote lookup** – `activateRemote` starts by calling `resolveRemoteUrl`. In dev it returns the hard-coded dev-server entry (e.g., `http://localhost:5174/src/remoteEntry.js`). In production it fetches `/mfe*/.vite/manifest.json`, looks for the `src/remoteEntry.js` entry, and builds a URL such as `/mfe1/assets/remoteEntry.js`.
+2. **Remote lookup** – `activateRemote` starts by calling `resolveRemoteUrl`. In dev it returns the hard-coded dev-server entry (e.g., `http://localhost:5174/src/remoteEntry.js`). In production it fetches `/mfe*/manifest.json` (a copy of `.vite/manifest.json`), looks for the `src/remoteEntry.js` entry, and builds a URL such as `/mfe1/assets/remoteEntry.js`.
 3. **Dynamic import** – `loadRemoteModule` caches modules per remote ID, performs a dynamic `import()` on the resolved URL, and guarantees the result exposes a `mount` function. The `/* @vite-ignore */` comment keeps Vite from bundling the remote URL at build time so that requests stay dynamic.
 4. **Mount lifecycle** – Before showing the new MFE, the shell runs the cleanup function returned by the previous `mount` call (or invokes `module.unmount`). It then empties the shared container `<div>` and invokes `module.mount(container)`. Each remote’s `remoteEntry.js` re-exports `mount`/`unmount` from `bootstrap.jsx`, where a React root is created (or reused) inside that container.
 5. **Cleanup guarantees** – The `mount` implementation returns a disposer that unmounts the MFE when called. The shell stores that disposer in a ref so it can be run whenever the user switches tabs or when the shell unmounts entirely. This keeps React roots isolated and prevents memory leaks.
@@ -119,7 +119,7 @@ This flow means every button click only swaps the content area while the shell�
 ## 🧭 Why Dev Uses Direct Imports but Prod Reads the Manifest
 
 - **Dev mode (Vite servers)** – When running `./dev-all.sh` the shell proxies `/mfe1` and `/mfe2` to their Vite dev servers. Those servers host the source files directly, so `resolveRemoteUrl` returns the fixed `devEntry` for each remote. That gives you hot-module reloading and avoids building assets on every save.
-- **Production mode (static assets)** – After `npm run build`, Vite emits hashed filenames under each `dist/assets/` folder plus `.vite/manifest.json` describing how source files map to those hashed outputs. Because the hash changes per build, the shell cannot hard-code the path, so it fetches the manifest at runtime and pulls the path for `src/remoteEntry.js`.
+- **Production mode (static assets)** – After `npm run build`, Vite emits hashed filenames under each `dist/assets/` folder plus `.vite/manifest.json` describing how source files map to those hashed outputs. The build script copies this manifest to `/mfe*/manifest.json`, which is the path the shell fetches at runtime to locate `src/remoteEntry.js`.
 - **Single source of truth** – Both dev and prod bundles are built from the exact same source files (`remoteEntry.js`, `bootstrap.jsx`, `App.jsx`, etc.). The only difference is where the file is hosted (dev server memory vs. Nginx static assets) and how the final filename is derived (direct path vs. manifest lookup).
 - **Parity checks** – To ensure behavior stays identical, exercise both workflows: use `./dev-all.sh` to verify runtime integration with live dev servers, and run `./dist-all.sh` to confirm the manifest-driven lookup works with the built artifacts served through Nginx.
 

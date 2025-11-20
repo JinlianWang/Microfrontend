@@ -1,4 +1,27 @@
 const moduleCache = new Map();
+const cssCache = new Map();
+
+const injectRemoteCss = (remote, cssFiles = []) => {
+  if (typeof document === 'undefined' || !cssFiles.length) {
+    return;
+  }
+
+  const loaded = cssCache.get(remote.id) ?? new Set();
+  cssFiles.forEach((file) => {
+    if (!file || loaded.has(file)) {
+      return;
+    }
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `${remote.basePath}/${file}`;
+    link.dataset.remoteId = remote.id;
+    document.head.appendChild(link);
+    loaded.add(file);
+  });
+
+  cssCache.set(remote.id, loaded);
+};
 
 const resolveRemoteUrl = async (remote) => {
   if (import.meta.env.DEV) {
@@ -16,6 +39,7 @@ const resolveRemoteUrl = async (remote) => {
     throw new Error(`Remote entry missing in manifest for ${remote.id}`);
   }
 
+  injectRemoteCss(remote, entry.css);
   return `${remote.basePath}/${entry.file}`;
 };
 
