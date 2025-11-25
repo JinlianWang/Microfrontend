@@ -23,11 +23,14 @@ const App = () => {
   const defaultApp = useMemo(() => remotes.mfe1.id, []);
   const [activeId, setActiveId] = useState(defaultApp);
   const [status, setStatus] = useState({ loading: true, error: null });
+  const [showLoadingIndicator, setShowLoadingIndicator] = useState(true);
   const activeRemote = remotes[activeId];
   const currentLabel = activeRemote?.label ?? 'Microfrontend';
   const containerRef = useRef(null);
   const currentCleanupRef = useRef(null);
   const loadToken = useRef(0);
+  const initialLoadRef = useRef(true);
+  const loadingDelayRef = useRef(null);
 
   const activateRemote = useCallback(async (id) => {
     const remote = remotes[id];
@@ -74,9 +77,48 @@ const App = () => {
     activateRemote(activeId);
   }, [activeId, activateRemote]);
 
+  useEffect(() => {
+    if (!status.loading) {
+      initialLoadRef.current = false;
+      setShowLoadingIndicator(false);
+      if (loadingDelayRef.current) {
+        clearTimeout(loadingDelayRef.current);
+        loadingDelayRef.current = null;
+      }
+      return;
+    }
+
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      setShowLoadingIndicator(true);
+      return;
+    }
+
+    setShowLoadingIndicator(false);
+    const timer = setTimeout(() => {
+      setShowLoadingIndicator(true);
+      loadingDelayRef.current = null;
+    }, 200);
+    loadingDelayRef.current = timer;
+
+    return () => {
+      clearTimeout(timer);
+      loadingDelayRef.current = null;
+    };
+  }, [status.loading]);
+
   useEffect(
     () => () => {
       currentCleanupRef.current?.();
+    },
+    []
+  );
+
+  useEffect(
+    () => () => {
+      if (loadingDelayRef.current) {
+        clearTimeout(loadingDelayRef.current);
+      }
     },
     []
   );
@@ -103,7 +145,7 @@ const App = () => {
       </header>
 
       <main className={styles.content}>
-        {status.loading && (
+        {status.loading && showLoadingIndicator && (
           <div className={styles.message}>Loading {currentLabel}…</div>
         )}
         {status.error && (
