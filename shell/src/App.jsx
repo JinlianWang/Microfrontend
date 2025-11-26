@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import styles from './App.module.css';
 import { loadRemoteModule } from './remoteLoader';
 
@@ -18,27 +19,16 @@ const remotes = {
     basePath: '/mfe2',
   },
 };
-
-const App = () => {
-  const defaultApp = useMemo(() => remotes.mfe1.id, []);
-  const [activeId, setActiveId] = useState(defaultApp);
+const RemoteView = ({ remote }) => {
   const [status, setStatus] = useState({ loading: true, error: null });
   const [showLoadingIndicator, setShowLoadingIndicator] = useState(true);
-  const activeRemote = remotes[activeId];
-  const currentLabel = activeRemote?.label ?? 'Microfrontend';
   const containerRef = useRef(null);
   const currentCleanupRef = useRef(null);
   const loadToken = useRef(0);
   const initialLoadRef = useRef(true);
   const loadingDelayRef = useRef(null);
 
-  const activateRemote = useCallback(async (id) => {
-    const remote = remotes[id];
-    if (!remote) {
-      setStatus({ loading: false, error: new Error(`Unknown remote ${id}`) });
-      return;
-    }
-
+  const activateRemote = useCallback(async () => {
     const token = ++loadToken.current;
     setStatus({ loading: true, error: null });
 
@@ -55,7 +45,7 @@ const App = () => {
       }
       container.innerHTML = '';
 
-      const maybeCleanup = module.mount(container);
+      const maybeCleanup = module.mount(container, { basename: remote.basePath });
       if (typeof maybeCleanup === 'function') {
         currentCleanupRef.current = maybeCleanup;
       } else if (typeof module.unmount === 'function') {
@@ -71,11 +61,19 @@ const App = () => {
       }
       setStatus({ loading: false, error });
     }
-  }, []);
+  }, [remote]);
 
   useEffect(() => {
-    activateRemote(activeId);
-  }, [activeId, activateRemote]);
+    activateRemote();
+
+    return () => {
+      currentCleanupRef.current?.();
+      if (loadingDelayRef.current) {
+        clearTimeout(loadingDelayRef.current);
+        loadingDelayRef.current = null;
+      }
+    };
+  }, [activateRemote]);
 
   useEffect(() => {
     if (!status.loading) {
@@ -107,21 +105,31 @@ const App = () => {
     };
   }, [status.loading]);
 
-  useEffect(
-    () => () => {
-      currentCleanupRef.current?.();
-    },
-    []
+  return (
+    <>
+      {status.loading && showLoadingIndicator && (
+        <div className={styles.message}>Loading {remote.label}…</div>
+      )}
+      {status.error && (
+        <div className={[styles.message, styles.error].join(' ')}>
+          Failed to load {remote.label}: {status.error.message}
+        </div>
+      )}
+      <div ref={containerRef} className={styles.mfeContainer} />
+    </>
   );
+};
 
-  useEffect(
-    () => () => {
-      if (loadingDelayRef.current) {
-        clearTimeout(loadingDelayRef.current);
-      }
-    },
-    []
-  );
+const App = () => {
+  const location = useLocation();
+  const pathname = location.pathname || '/';
+  const activeRemote = useMemo(() => {
+    return (
+      Object.values(remotes).find((remote) =>
+        pathname === remote.basePath || pathname.startsWith(`${remote.basePath}/`)
+      ) ?? remotes.mfe1
+    );
+  }, [pathname]);
 
   return (
     <div className={styles.page}>
@@ -129,31 +137,33 @@ const App = () => {
         <h1 className={styles.title}>Shell App</h1>
         <nav className={styles.nav}>
           {Object.values(remotes).map((remote) => (
-            <button
+            <NavLink
               key={remote.id}
-              type="button"
-              onClick={() => setActiveId(remote.id)}
-              className={[
-                styles.navButton,
-                activeId === remote.id ? styles.navButtonActive : '',
-              ].join(' ')}
+              to={remote.basePath}
+              end={false}
+              className={({ isActive }) => {
+                const isCurrent =
+                  isActive ||
+                  pathname === remote.basePath ||
+                  pathname.startsWith(`${remote.basePath}/`);
+                return [styles.navButton, isCurrent ? styles.navButtonActive : '']
+                  .filter(Boolean)
+                  .join(' ');
+              }}
             >
               {remote.label}
-            </button>
+            </NavLink>
           ))}
         </nav>
       </header>
 
       <main className={styles.content}>
-        {status.loading && showLoadingIndicator && (
-          <div className={styles.message}>Loading {currentLabel}…</div>
-        )}
-        {status.error && (
-          <div className={[styles.message, styles.error].join(' ')}>
-            Failed to load {currentLabel}: {status.error.message}
-          </div>
-        )}
-        <div ref={containerRef} className={styles.mfeContainer} />
+        <Routes>
+          <Route path="/" element={<Navigate to={remotes.mfe1.basePath} replace />} />
+          <Route path="/mfe1/*" element={<RemoteView remote={remotes.mfe1} />} />
+          <Route path="/mfe2/*" element={<RemoteView remote={remotes.mfe2} />} />
+          <Route path="*" element={<Navigate to={activeRemote.basePath} replace />} />
+        </Routes>
       </main>
     </div>
   );

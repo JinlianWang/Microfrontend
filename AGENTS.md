@@ -5,6 +5,12 @@
 - `nginx/` holds the deployment assets: `html/` (populated by builds) and `default.conf` for routing.
 - `build-and-copy.sh` orchestrates production builds and copies artifacts into `nginx/html`. `docker-compose.yml` boots the Nginx reverse proxy that serves everything on `localhost:8080`.
 
+## Routing Model
+- The shell wraps its root in `BrowserRouter` and defines routes for `/`, `/mfe1/*`, and `/mfe2/*`. `/` redirects to `/mfe1` and unmatched paths redirect back to the active remote.
+- When mounting a remote, the shell passes `basename: '/mfe1'` or `'/mfe2'`; each remote’s `bootstrap.jsx` wraps `<App />` in its own `BrowserRouter basename={basename}` so nested links (e.g., `clock`, `timer`, `calendar`) sync with the browser history.
+- MFE1 exposes `clock` (default) and `timer` child routes; MFE2 exposes `calendar` (default) and `timer`. Keep shared layout/state outside `<Routes>` so navigation doesn’t remount everything.
+- `nginx/default.conf` already uses `try_files` so refreshing deep links such as `/mfe2/timer` returns the correct `index.html` and lets the routers hydrate client-side.
+
 ## Build, Test, and Development Commands
 - `npm install` (run inside each `shell`, `mfe1`, `mfe2` directory) installs dependencies.
 - `./dev-all.sh` launches every Vite dev server on known ports (shell:5173, mfe1:5174, mfe2:5175) and proxies `/mfe1` + `/mfe2` through the shell for a single origin workflow. The shell dynamically imports each remote's `remoteEntry.js` so the header stays mounted while the content swaps. Use `Ctrl+C` to stop. When hitting an MFE dev server directly, open `http://localhost:5174/` or `http://localhost:5175/`.

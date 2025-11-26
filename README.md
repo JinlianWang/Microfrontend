@@ -116,6 +116,14 @@ Try it out: run `./dev-all.sh`, open `http://localhost:5175/` directly (or view 
 
 This flow means every button click only swaps the content area while the shell’s header/nav stay mounted. All orchestration lives in `shell/src/index.jsx`, and every remote just needs to expose the `mount` contract.
 
+## 🗺️ Routing Model
+
+- **Shell owns the address bar** – `shell/src/index.jsx` wraps the app in `<BrowserRouter>` and defines the global route table. `/` immediately redirects to `/mfe1`, `/mfe1/*` and `/mfe2/*` mount the corresponding remote via `<RemoteView>`, and any unknown path falls back to the currently active remote’s base path. The header nav is now built with `<NavLink>` components so the active tab tracks the URL instead of an internal state toggle.
+- **Remotes get their own routers** – When the shell calls `remote.mount(container, { basename })` it passes the base path (`/mfe1` or `/mfe2`). Each remote’s `bootstrap.jsx` wraps `<App />` in a `<BrowserRouter basename={basename}>`, so the child routes operate on relative paths like `clock` or `timer` while still syncing with the global history stack.
+- **Nested route layouts** – MFE1 exposes `clock` (default) and `timer` routes, while MFE2 exposes `calendar` (default) and `timer`. Both apps keep shared UI (headings, tabs, shared state like calendar selection or timer elapsed time) outside `<Routes>` so switching tabs doesn’t re-mount expensive components.
+- **Deep links just work** – Because both layers rely on the browser history, you can refresh or directly visit `/mfe1/timer` or `/mfe2/calendar` in dev (`./dev-all.sh`) or production (Nginx). The shell loads the proper remote, the remote router sees the remainder of the path thanks to the provided `basename`, and `nginx/default.conf` uses `try_files` so route refreshes fall back to the correct `index.html` assets.
+- **Fallbacks stay safe** – Unknown nested paths (e.g., `/mfe1/foo`) automatically redirect to the default child route, which keeps the router tree predictable even when end users mistype URLs.
+
 ## 🧭 Why Dev Uses Direct Imports but Prod Reads the Manifest
 
 - **Dev mode (Vite servers)** – When running `./dev-all.sh` the shell proxies `/mfe1` and `/mfe2` to their Vite dev servers. Those servers host the source files directly, so `resolveRemoteUrl` returns the fixed `devEntry` for each remote. That gives you hot-module reloading and avoids building assets on every save.
